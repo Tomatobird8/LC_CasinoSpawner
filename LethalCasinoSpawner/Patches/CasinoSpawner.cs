@@ -38,13 +38,6 @@ internal class CasinoSpawner
     {
         if (!NetworkManager.Singleton.IsServer) return;
         if (!LethalCasinoSpawner.terminalEnabled.Value) return;
-        if (StartOfRound.Instance.inShipPhase)
-        {
-            __result = ScriptableObject.CreateInstance<TerminalNode>();
-            __result.displayText = "Cannot spawn casino in orbit.";
-            __result.clearPreviousText = true;
-            return;
-        }
 
         string[] text = __instance.screenText.text[^__instance.textAdded..].Split(" ");
         if (text.Length == 0) return;
@@ -54,7 +47,27 @@ internal class CasinoSpawner
         if (text.Length == 1)
         {
             __result = ScriptableObject.CreateInstance<TerminalNode>();
-            __result.displayText = "Usage:\ncasino spawn [x y z] [y] - Spawns a casino (at position and y-rotation if specified)\ncasino despawn - Despawns all casino objects\n\n";
+            __result.displayText = 
+                "Usage:\n" +
+                "casino spawn [x y z] [y] Spawns the casino (at position and y-rotation if specified)\n\n" +
+                "casino (objectname) [x y z] [y] - Spawns a casino object (at position and y-rotation if specified)\n" +
+                "Valid object names:\n" +
+                "casino\n" +
+                "building\n" +
+                "slotmachine/slots/slot\n" +
+                "roulette\n" +
+                "jukebox\n" +
+                "atm\n" +
+                "blackjack/black/bjack\n" +
+                "thewheel/wheel\n\n" +
+                "casino despawn - Despawns all casino objects\n\n";
+            __result.clearPreviousText = true;
+            return;
+        }
+        if (StartOfRound.Instance.inShipPhase)
+        {
+            __result = ScriptableObject.CreateInstance<TerminalNode>();
+            __result.displayText = "Cannot spawn casino in orbit.";
             __result.clearPreviousText = true;
             return;
         }
@@ -62,51 +75,45 @@ internal class CasinoSpawner
 
         string mainArg = text[1].Trim().ToLowerInvariant();
 
-        if (mainArg == "spawn")
+        for (int i = 0;i< validObjects.Length; i++)
         {
-            if (text.Length != 2 && text.Length != 5 && text.Length != 6)
+            if (validObjects[i].ToLowerInvariant() == mainArg)
             {
-                __result = ScriptableObject.CreateInstance<TerminalNode>();
-                __result.displayText = "Please provide valid command arguments!\nUsage: casino spawn [x y z] [y]\nExamples:\ncasino spawn\ncasino spawn -100 15 0.24\ncasino spawn 0 10 0 270\n\n";
-                __result.clearPreviousText = true;
+                SpawnUsingTerminal(ref __result, text[1..]);
                 return;
             }
-            __result = ScriptableObject.CreateInstance<TerminalNode>();
-            __result.displayText = "Spawning casino!\n\n";
-            __result.clearPreviousText = true;
-
-            manager.SerializeAndSendHostConfigs();
-
-            if (text.Length == 2)
-            {
-                SpawnEntireCasino(casinoBuildingData[0].LocalPosition, Quaternion.identity);
-                LethalCasinoSpawner.Logger.LogInfo("Casino spawned at default position.");
-            } else if (text.Length >= 5)
-            {
-                Vector3 offsetPosition = Vector3.zero;
-                Quaternion offsetRotation = Quaternion.identity;
-                if (float.TryParse(text[2], out float offsetX))
-                {
-                    offsetPosition.x = offsetX;
-                }
-                if (float.TryParse(text[3], out float offsetY))
-                {
-                    offsetPosition.y = offsetY;
-                }
-                if (float.TryParse(text[4], out float offsetZ))
-                {
-                    offsetPosition.z = offsetZ;
-                }
-                if (text.Length == 6 && float.TryParse(text[5], out float rotOffsetY))
-                {
-                    offsetRotation = Quaternion.Euler(0, rotOffsetY, 0);
-                }
-
-                SpawnEntireCasino(offsetPosition, offsetRotation);
-            }
         }
-
-        if (mainArg == "despawn" || mainArg == "destroy" || mainArg == "delete" || mainArg == "remove")
+        if (mainArg == "spawn" || mainArg == "instantiate" || mainArg == "summon" || mainArg == "create" || mainArg == "casino")
+        {
+            text[1] = "casino";
+            SpawnUsingTerminal(ref __result, text[1..]);
+            return;
+        }
+        else if (mainArg == "building")
+        {
+            text[1] = "casinobuilding";
+            SpawnUsingTerminal(ref __result, text[1..]);
+            return;
+        }
+        else if (mainArg == "slot" || mainArg == "slots")
+        {
+            text[1] = "slotmachine";
+            SpawnUsingTerminal(ref __result, text[1..]);
+            return;
+        }
+        else if (mainArg == "black" || mainArg == "bjack")
+        {
+            text[1] = "blackjack";
+            SpawnUsingTerminal(ref __result, text[1..]);
+            return;
+        }
+        else if (mainArg == "wheel")
+        {
+            text[1] = "thewheel";
+            SpawnUsingTerminal(ref __result, text[1..]);
+            return;
+        }
+        else if (mainArg == "despawn" || mainArg == "destroy" || mainArg == "delete" || mainArg == "remove")
         {
             if (CasinoManager.Objects.Count == 0)
             {
@@ -116,12 +123,67 @@ internal class CasinoSpawner
                 return;
             }
             __result = ScriptableObject.CreateInstance<TerminalNode>();
-            __result.displayText = "Removing casino!\n\n\n";
+            __result.displayText = "Removing all casino objects!\n\n";
             __result.clearPreviousText = true;
 
             manager.DespawnCasinoServerRpc();
 
             return;
+        }
+    }
+
+    private static void SpawnUsingTerminal(ref TerminalNode result, string[] args)
+    {
+        if (args.Length != 1 && args.Length != 4 && args.Length != 5)
+        {
+            result = ScriptableObject.CreateInstance<TerminalNode>();
+            result.displayText = "Please provide valid command arguments!\n" +
+                "Usage: casino spawn [x y z] [y]\n" +
+                "Examples:\n" +
+                "casino spawn\n" +
+                "casino spawn -100 15 0.24\n" +
+                "casino spawn 0 10 0 270\n\n";
+            result.clearPreviousText = true;
+            return;
+        }
+
+        CasinoManager manager = LethalCasino.patches.RoundManagerPatch.CasinoManager;
+
+        manager.SerializeAndSendHostConfigs();
+
+        result = ScriptableObject.CreateInstance<TerminalNode>();
+        result.displayText = $"Spawning {args[0]}!\n\n";
+        result.clearPreviousText = true;
+
+        Vector3 offsetPosition = Vector3.zero;
+        Quaternion offsetRotation = Quaternion.identity;
+
+        if (args.Length >= 4)
+        {
+            if (float.TryParse(args[1], out float offsetX))
+            {
+                offsetPosition.x = offsetX;
+            }
+            if (float.TryParse(args[2], out float offsetY))
+            {
+                offsetPosition.y = offsetY;
+            }
+            if (float.TryParse(args[3], out float offsetZ))
+            {
+                offsetPosition.z = offsetZ;
+            }
+            if (args.Length == 5 && float.TryParse(args[4], out float rotOffsetY))
+            {
+                offsetRotation = Quaternion.Euler(0, rotOffsetY, 0);
+            }
+        }
+        if (args[0] == "casino")
+        {
+            SpawnEntireCasino(args.Length > 1? offsetPosition : casinoBuildingData[0].LocalPosition, offsetRotation);
+        }
+        else
+        {
+            SpawnCasinoObject(args[0], offsetPosition, offsetRotation);
         }
     }
 
@@ -207,7 +269,7 @@ internal class CasinoSpawner
         bool found = false;
         for (int i = 0;i < validObjects.Length; i++)
         {
-            if (objectName != validObjects[i].ToLowerInvariant())
+            if (objectName.Trim().ToLowerInvariant() != validObjects[i].ToLowerInvariant())
             {
                 continue;
             }

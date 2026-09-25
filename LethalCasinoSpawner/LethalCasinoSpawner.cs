@@ -17,6 +17,8 @@ namespace LethalCasinoSpawner
 
         public static ConfigEntry<bool> terminalEnabled = null!;
 
+        public static ConfigEntry<bool> configEnabled = null!;
+
         public static List<ConfigEntry<string>> moonConfigurations = [];
 
         internal static Scene latestScene;
@@ -27,6 +29,7 @@ namespace LethalCasinoSpawner
             Instance = this;
 
             terminalEnabled = Config.Bind("General", "Enable Terminal Commands", true, "Whether the terminal commands for spawning/despawning casino should be enabled. Host only.");
+            configEnabled = Config.Bind("General", "Enable Per Moon Configs", true, "Whether the per-moon configuration for spawning casino assets should be enabled. Host only.");
 
             Patch();
 
