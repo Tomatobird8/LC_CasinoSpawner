@@ -193,6 +193,8 @@ internal class CasinoSpawner
     [HarmonyPrefix]
     private static void LoadNewLevelWait_Prefix(RoundManager __instance)
     {
+        if (!NetworkManager.Singleton.IsServer) return;
+        if (!LethalCasinoSpawner.configEnabled.Value) return;
         for (int i = 0; i < LethalCasinoSpawner.moonConfigurations.Count; i++)
         {
             if (LethalCasinoSpawner.moonConfigurations[i].Definition.Key == $"Moon: {__instance.currentLevel.PlanetName}")
@@ -205,7 +207,7 @@ internal class CasinoSpawner
 
     private static void ReadMoonConfig(string s)
     {
-        string[] spawnDefinitions = s.Split(';');
+        string[] spawnDefinitions = s.Split(';', System.StringSplitOptions.RemoveEmptyEntries);
         if (spawnDefinitions.Length == 0)
         {
             LethalCasinoSpawner.Logger.LogInfo("Nothing defined in configuration. Skipping...");
@@ -213,7 +215,7 @@ internal class CasinoSpawner
         }
         for (int i = 0;i < spawnDefinitions.Length; i++)
         {
-            string[] spawnDefintion = spawnDefinitions[i].Split(",");
+            string[] spawnDefintion = spawnDefinitions[i].Split(",", System.StringSplitOptions.RemoveEmptyEntries);
             if (spawnDefintion.Length != 7 && spawnDefintion.Length != 4)
             {
                 LethalCasinoSpawner.Logger.LogError("Invalid spawn definition. Please use the correct formatting as seen in the description of the configuration. Invalid configuration: " + spawnDefinitions[i]);
